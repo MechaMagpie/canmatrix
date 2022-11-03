@@ -222,3 +222,19 @@ def test_export_all_native():
     assert (data['messages'][0]['signals'][0]['factor'] == 0.123)
     assert (data['messages'][0]['signals'][0]['offset'] == 1)
     assert (data['messages'][0]['is_fd'] is False)
+
+def test_export_receiver_transmitter():
+    export_matrix = canmatrix.canmatrix.CanMatrix()
+    frame = canmatrix.canmatrix.Frame(name="test_frame", size=6, arbitration_id=10)
+    frame.add_receiver("TESTRECV")
+    frame.add_transmitter("TESTTRANS")
+    signal = canmatrix.Signal(name="test_sig", size=40, is_float=True, min="-4.2", max=42, factor="0.123", offset=1)
+    signal.add_receiver("TESTRECV2")
+    frame.add_signal(signal)
+    export_matrix.add_frame(frame)
+    out_file = io.BytesIO()
+    canmatrix.formats.dump(export_matrix, out_file, "json", jsonExportAll=True, jsonNativeTypes=True)
+    import_matrix = canmatrix.formats.loads_flat(out_file.getvalue().decode("utf-8"), "json", jsonExportAll=True)
+    assert "TESTRECV" in import_matrix.frames[0].receivers
+    assert "TESTTRANS" in import_matrix.frames[0].transmitters
+    assert "TESTRECV2" in import_matrix.frames[0].signals[0].receivers
