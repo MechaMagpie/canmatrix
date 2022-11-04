@@ -126,6 +126,7 @@ def dump(db, f, **options):
                     "bit_length": signal.size,
                     "factor": number_converter(signal.factor),
                     "offset": number_converter(signal.offset),
+                    "receivers": signal.receivers,
                     "min": number_converter(signal.min),
                     "max": number_converter(signal.max),
                     "is_big_endian": signal.is_little_endian is False,
@@ -147,13 +148,17 @@ def dump(db, f, **options):
                     symbolic_signal["mux_val_grp"] = signal.mux_val_grp
 
                 symbolic_signals.append(symbolic_signal)
-
+            frame_transmitters = frame.transmitters
+            frame_receivers = frame.receivers
+            
             export_dict['messages'].append(
                 {"name": frame.name,
                  "id": int(frame.arbitration_id.id),
                  "is_extended_frame": frame.arbitration_id.extended,
                  "is_fd": frame.is_fd,
                  "signals": symbolic_signals,
+                 "transmitters": frame_transmitters,
+                 "receivers": frame_receivers,
                  "attributes": frame_attributes,
                  "comment": frame.comment,
                  "length": frame.size})
@@ -198,7 +203,12 @@ def load(f, **_options):
             new_frame = canmatrix.Frame(frame["name"], arbitration_id=frame["id"], size=8)
             if "length" in frame:
                 new_frame.size = frame["length"]
-
+                
+            if "transmitters" in frame:
+                new_frame.transmitters = frame["transmitters"][:]
+            if "receivers" in frame:
+                new_frame.receivers = frame["receivers"][:]
+            
             new_frame.arbitration_id.extended = frame.get("is_extended_frame", False)
 
             for signal in frame["signals"]:
@@ -232,6 +242,9 @@ def load(f, **_options):
                 if signal.get("values", False):
                     for key in signal["values"]:
                         new_signal.add_values(key, signal["values"][key])
+
+                if signal.get("receivers", False):
+                    new_signal.receivers = signal["receivers"][:]
                 if new_signal.is_little_endian is False:
                     new_signal.set_startbit(
                         new_signal.start_bit, bitNumbering=1, startLittle=True)
